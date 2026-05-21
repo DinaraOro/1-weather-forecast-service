@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 class ForecastRequest(BaseModel):
 
+    model: str
+
     lag_1: float
     lag_2: float
     lag_7: float
