@@ -2,172 +2,92 @@
 
 ## Описание проекта
 
-Weather Forecast Service — это ML-сервис для прогнозирования средней температуры воздуха на основе исторических погодных данных.
+Weather Forecast Service — это end-to-end ML-сервис для прогнозирования температуры воздуха.
 
-Проект реализует полный pipeline production-style ML системы:
+Пользователь может:
 
-- обучение модели машинного обучения
-- feature engineering для временных рядов
-- backend API на FastAPI
-- frontend интерфейс на Streamlit
-- inference через HTTP API
-- взаимодействие frontend ↔ backend ↔ model
+* выбрать город;
+* выбрать модель прогнозирования;
+* получить прогноз температуры на 7 дней;
+* сравнить прогноз с фактическими погодными данными;
+* переобучить модель;
+* обновить погодные данные через API.
 
----
+Проект демонстрирует полный ML lifecycle:
 
-# Цель проекта
-
-Основная цель проекта — построить end-to-end ML сервис для прогнозирования температуры и продемонстрировать навыки:
-
-- Machine Learning
-- Time Series Forecasting
-- Feature Engineering
-- Backend Development
-- API Development
-- ML Model Serving
-- Frontend Integration
-- Debugging и networking
-
----
-
-# Используемый стек
-
-## Machine Learning
-
-- pandas
-- numpy
-- scikit-learn
-- statsmodels
-- PyTorch
-
-## Backend
-
-- FastAPI
-- Uvicorn
-- Pydantic
-
-## Frontend
-
-- Streamlit
-
-## Visualization
-
-- Plotly
-
----
-
-# Датасет
-
-Используются погодные данные по Амстердаму за 2023–2024 годы.
-
-Основные признаки:
-
-- temperature_2m_mean
-- temperature_2m_max
-- temperature_2m_min
-- precipitation_sum
-- wind_speed_10m_max
-
----
-
-# Feature Engineering
-
-Для прогнозирования использовались лаговые признаки и rolling statistics.
-
-## Используемые признаки
-
-| Feature | Описание |
-|---|---|
-| lag_1 | температура за 1 день до прогноза |
-| lag_2 | температура за 2 дня до прогноза |
-| lag_7 | температура за 7 дней до прогноза |
-| rolling_mean_7 | средняя температура за последние 7 дней |
-| precipitation_sum | количество осадков |
-| wind_speed_10m_max | максимальная скорость ветра |
-
----
-
-# Используемые модели
-
-В проекте были протестированы несколько подходов.
-
-## Random Forest Regressor
-
-Основная production-модель проекта.
-
-Преимущества:
-
-- хорошо работает на tabular data
-- устойчив к noise
-- не требует нормализации признаков
-- хорошо работает на небольших датасетах
-
----
-
-## ARIMA
-
-Классическая статистическая модель временных рядов.
-
-Недостатки:
-
-- плохо справилась со сложной нелинейной динамикой
-- предсказания стремились к усреднению ряда
-
----
-
-## SARIMA
-
-Seasonal extension модели ARIMA.
-
-Недостатки:
-
-- высокая ошибка
-- слабое качество на данном датасете
-
----
-
-## LSTM
-
-Нейронная сеть для временных рядов.
-
-Особенности:
-
-- использовалась библиотека PyTorch
-- применялась нормализация данных через MinMaxScaler
-- показала результаты лучше ARIMA, но хуже RandomForest
-
----
-
-# Сравнение моделей
-
-| Model | MAE | RMSE |
-|---|---|---|
-| RandomForest | 1.62 | 2.11 |
-| ARIMA | 7.58 | 8.99 |
-| SARIMA | 10.95 | 12.85 |
-| LSTM | 4.23 | 4.98 |
+* загрузка данных;
+* предобработка;
+* обучение моделей;
+* сохранение артефактов;
+* инференс;
+* обновление данных;
+* визуализация результатов;
+* Docker-развертывание.
 
 ---
 
 # Архитектура проекта
 
-```text
-User
-↓
-Streamlit Frontend
-↓
-HTTP Request
-↓
-FastAPI Backend
-↓
-RandomForest Model
-↓
-Prediction
-↓
-JSON Response
-↓
-Frontend UI
-```
+## Frontend
+
+* Streamlit
+* интерактивный интерфейс;
+* визуализация прогнозов;
+* управление моделями.
+
+## Backend
+
+* FastAPI
+* REST API;
+* inference endpoints;
+* retraining pipeline;
+* refresh data pipeline.
+
+## Хранение данных
+
+* CSV-датасеты;
+* артефакты моделей;
+* метрики моделей.
+
+## ML-модели
+
+Проект поддерживает три подхода к прогнозированию:
+
+| Модель        | Тип                     |
+| ------------- | ----------------------- |
+| Random Forest | Feature-based ML        |
+| ARIMA         | Statistical Time Series |
+| LSTM          | Neural Time Series      |
+
+---
+
+# Функциональность
+
+## Загрузка погодных данных
+
+* автоматическая загрузка данных через Open-Meteo API;
+* локальное сохранение датасетов;
+* обновление данных до актуальной даты.
+
+## Прогнозирование
+
+* прогноз температуры на 7 дней;
+* recursive forecasting;
+* сравнение forecast vs actual.
+
+## Переобучение моделей
+
+* retrain через UI;
+* автоматическое сохранение артефактов;
+* пересчет метрик качества.
+
+## Визуализация
+
+Интерактивный график отображает:
+
+* historical temperatures;
+* forecast;
+* actual future temperatures.
 
 ---
 
@@ -175,162 +95,231 @@ Frontend UI
 
 ```text
 1-weather-forecast-service/
-│
+├── artifacts/
 ├── backend/
-│   └── app/
-│       ├── main.py
-│       ├── schemas/
-│       ├── services/
-│       └── artifacts/
-│
-├── frontend/
-│   └── app.py
-│
-├── notebooks/
-│
+│   ├── app/
+│   │   ├── api/
+│   │   ├── data/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── schemas/
 ├── data/
-│
-├── README.md
-│
-├── pyproject.toml
-│
-└── uv.lock
+│   └── raw/
+├── frontend/
+├── docker-compose.yml
+└── README.md
 ```
 
 ---
 
 # API Endpoints
 
-## Health Check
-
-```http
-GET /health
-```
-
-Response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
----
-
-## Prediction Endpoint
+## Получение прогноза
 
 ```http
 POST /predict
 ```
 
-Request example:
+Пример запроса:
 
 ```json
 {
-  "lag_1": 10.0,
-  "lag_2": 9.5,
-  "lag_7": 8.0,
-  "rolling_mean_7": 9.2,
-  "precipitation": 2.1,
-  "wind": 20.0
-}
-```
-
-Response example:
-
-```json
-{
-  "prediction": 8.72
+  "city": "Lisbon",
+  "model_name": "random_forest",
+  "forecast_date": "2026-05-20"
 }
 ```
 
 ---
 
-# Как запустить проект
+## Переобучение модели
 
-## 1. Клонировать репозиторий
+```http
+POST /train
+```
+
+Пример запроса:
+
+```json
+{
+  "city": "Lisbon",
+  "model_name": "lstm"
+}
+```
+
+---
+
+## Обновление погодных данных
+
+```http
+POST /refresh-data
+```
+
+Query params:
+
+```text
+city=Lisbon
+```
+
+---
+
+## Получение метрик
+
+```http
+GET /metrics
+```
+
+---
+
+## Получение погодных данных
+
+```http
+GET /weather-data
+```
+
+---
+
+# ML Pipeline
+
+## Random Forest
+
+Feature-based forecasting с использованием:
+
+* lag features;
+* rolling averages;
+* calendar features.
+
+## ARIMA
+
+Statistical forecasting:
+
+* autoregression;
+* differencing;
+* moving average.
+
+Конфигурация:
+
+```text
+ARIMA(7,1,1)
+```
+
+## LSTM
+
+Neural forecasting на базе PyTorch:
+
+* sequence windows;
+* LSTM layers;
+* recursive prediction.
+
+---
+
+# Источник данных
+
+## Open-Meteo API
+
+Используются:
+
+* Geocoding API;
+* Historical Weather API.
+
+Официальный сайт:
+
+https://open-meteo.com/
+
+---
+
+# Запуск проекта
+
+## 1. Клонирование репозитория
 
 ```bash
 git clone <repository_url>
-```
-
----
-
-## 2. Перейти в папку проекта
-
-```bash
 cd 1-weather-forecast-service
 ```
 
 ---
 
-## 3. Активировать environment
+## 2. Запуск контейнеров
 
 ```bash
-source .venv/bin/activate
+docker compose up --build
 ```
 
 ---
 
-## 4. Запустить backend
+# Адреса сервисов
 
-```bash
-uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
+## Frontend
+
+```text
+http://localhost:8501
+```
+
+## Backend API
+
+```text
+http://localhost:8000
 ```
 
 ---
 
-## 5. Запустить frontend
+# Пример сценария работы
 
-В новом terminal:
-
-```bash
-source .venv/bin/activate
-streamlit run frontend/app.py
-```
+1. Выбрать город.
+2. Выбрать модель.
+3. Указать дату прогноза.
+4. Получить прогноз.
+5. Сравнить forecast vs actual.
+6. Обновить погодные данные.
+7. Переобучить модель.
 
 ---
 
-# Networking issue и debugging
+# Используемые технологии
 
-Во время разработки возникла проблема:
+## Backend
 
-- requests из Streamlit возвращали 502 Bad Gateway
-- curl при этом работал корректно
+* FastAPI
+* Pandas
+* Scikit-learn
+* Statsmodels
+* PyTorch
 
-Причина оказалась связана с proxy/VPN environment variables.
+## Frontend
 
-Проблема была решена через:
+* Streamlit
+* Plotly
 
-```python
-session.trust_env = False
-```
+## Infrastructure
 
-Это отключило использование системных proxy settings внутри requests.Session().
+* Docker
+* Docker Compose
 
 ---
 
 # Возможные улучшения
 
-- Dockerization
-- CI/CD pipeline
-- deployment в cloud
-- подключение real weather API
-- model registry
-- автоматический retraining
-- monitoring и logging
-- поддержка нескольких моделей
-- async inference
+* hyperparameter tuning;
+* experiment tracking;
+* Airflow orchestration;
+* cloud deployment;
+* GPU training;
+* confidence intervals;
+* model monitoring;
+* MLflow integration.
 
 ---
 
-# Результат
+# Definition of Done
 
-В рамках проекта был построен полноценный ML web service с production-style архитектурой:
+Проект удовлетворяет следующим требованиям:
 
-- frontend
-- backend
-- REST API
-- model serving
-- inference pipeline
-- ML model integration
+* Dockerized deployment;
+* web-интерфейс прогнозирования;
+* поддержка нескольких типов моделей;
+* forecast vs actual visualization;
+* автоматическое обновление данных;
+* retraining pipeline;
+* сохранение артефактов моделей;
+* модульная backend-архитектура;
+* визуализация метрик качества.

@@ -1,45 +1,39 @@
 from fastapi import FastAPI
 
-from backend.app.schemas.forecast_schema import (
-    ForecastRequest,
+from app.api.routes.predict import (
+    router as predict_router,
 )
 
-from backend.app.services.forecast_service import (
-    predict_temperature,
+from app.api.routes.train import (
+    router as train_router,
 )
 
-app = FastAPI()
+from app.api.routes.metrics import (
+    router as metrics_router,
+)
 
 
-@app.get("/")
-def root():
+from app.api.routes.weather_data import (
+    router as weather_data_router,
+)
 
-    return {
-        "message": "Weather Forecast Service is running"
-    }
+from app.api.routes.refresh_data import (
+    router as refresh_data_router,
+)
 
-
-@app.get("/health")
-def health():
-
-    return {
-        "status": "ok"
-    }
+app = FastAPI(
+    title="Weather Forecast Service",
+)
 
 
-@app.post("/predict")
-def predict(request: ForecastRequest):
+app.include_router(predict_router)
 
-    try:
+app.include_router(train_router)
 
-        prediction = predict_temperature(request)
+app.include_router(metrics_router)
 
-        return {
-            "prediction": prediction
-        }
+app.include_router(weather_data_router)
 
-    except Exception as e:
-
-        return {
-            "error": str(e)
-        }
+app.include_router(
+    refresh_data_router
+)

@@ -236,3 +236,8 @@ artifacts/
 
 # VS Code
 .vscode/
+
+# ML models
+
+*.pth
+*.pkl

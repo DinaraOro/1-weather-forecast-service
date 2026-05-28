@@ -7,121 +7,150 @@ import streamlit as st
 st.title("Weather Forecast Service")
 
 
-model = st.selectbox(
-    "Select model",
+city = st.selectbox(
+    "Select city",
     [
-        "RandomForest",
-        "ARIMA",
-        "LSTM",
+        "Lisbon",
+        "Amsterdam",
+        "Paris",
+        "Berlin",
     ],
 )
 
 
-lag_1 = st.number_input(
-    "Temperature yesterday",
-    value=10.0,
+model_name = st.selectbox(
+    "Select model",
+    [
+        "random_forest",
+        "arima",
+        "lstm",
+    ],
 )
 
-lag_2 = st.number_input(
-    "Temperature 2 days ago",
-    value=9.5,
-)
 
-lag_7 = st.number_input(
-    "Temperature 7 days ago",
-    value=8.0,
-)
-
-rolling_mean_7 = st.number_input(
-    "7-day rolling mean",
-    value=9.2,
-)
-
-precipitation = st.number_input(
-    "Precipitation",
-    value=2.1,
-)
-
-wind = st.number_input(
-    "Wind speed",
-    value=20.0,
+forecast_date = st.date_input(
+    "Forecast date"
 )
 
 
 if st.button("Predict"):
 
     payload = {
-        "model": model,
-        "lag_1": lag_1,
-        "lag_2": lag_2,
-        "lag_7": lag_7,
-        "rolling_mean_7": rolling_mean_7,
-        "precipitation": precipitation,
-        "wind": wind,
+        "city": city,
+        "model_name": model_name,
+        "forecast_date": str(forecast_date),
     }
 
     try:
 
-        session = requests.Session()
-
-        session.trust_env = False
-
-        response = session.post(
+        # Forecast request
+        predict_response = requests.post(
             "http://backend:8000/predict",
             json=payload,
-            timeout=5,
+            timeout=30,
         )
 
-        prediction = response.json()["prediction"]
-
-        st.success(
-            f"Predicted temperature: {prediction:.2f} °C"
+        forecast = (
+            predict_response.json()[
+                "forecast"
+            ]
         )
 
-        if model == "RandomForest":
+        forecast_df = pd.DataFrame(
+            forecast
+        )
 
-            df = pd.read_csv(
-                "data/processed/rf_predictions.csv"
-            )
+        # Historical weather data
+        history_response = requests.get(
+            "http://backend:8000/weather-data",
+            params={
+                "city": city,
+            },
+            timeout=30,
+        )
 
-        elif model == "LSTM":
+        history_data = (
+            history_response.json()
+        )
 
-            df = pd.read_csv(
-                "data/processed/lstm_predictions.csv"
-            )
-        elif model == "ARIMA":
+        history_df = pd.DataFrame(
+            history_data
+        )
 
-            df = pd.read_csv(
-                "data/processed/arima_predictions.csv"
-            )
-        else:
+        # Convert dates
+        history_df["date"] = pd.to_datetime(
+            history_df["date"]
+        )
 
-            df = pd.read_csv(
-                "data/processed/rf_predictions.csv"
-            )
+        forecast_df["date"] = pd.to_datetime(
+            forecast_df["date"]
+        )
+
+        forecast_start = pd.to_datetime(
+            forecast_date
+        )
+
+        # Split historical and actual future
+        past_history_df = history_df[
+            history_df["date"] < forecast_start
+        ]
+
+        # only last 30 days
+        past_history_df = (
+            past_history_df
+            .sort_values("date")
+            .tail(30)
+        )
+        actual_future_df = history_df[
+            history_df["date"] >= forecast_start
+        ]
+
+        # Forecast table
+        st.subheader(
+            "7-Day Forecast"
+        )
+
+        st.dataframe(
+            forecast_df
+        )
+
+        # Create graph
         fig = go.Figure()
 
+        # Historical data
         fig.add_trace(
             go.Scatter(
-                y=df["actual"],
+                x=past_history_df["date"],
+                y=past_history_df["temperature"],
                 mode="lines",
-                name="Actual",
+                name="Historical Temperature",
             )
         )
 
+        # Forecast
         fig.add_trace(
             go.Scatter(
-                y=df["predicted"],
-                mode="lines",
-                name="Predicted",
+                x=forecast_df["date"],
+                y=forecast_df["prediction"],
+                mode="lines+markers",
+                name="Forecast",
+            )
+        )
+
+        # Actual future data
+        fig.add_trace(
+            go.Scatter(
+                x=actual_future_df["date"],
+                y=actual_future_df["temperature"],
+                mode="lines+markers",
+                name="Actual Temperature",
             )
         )
 
         fig.update_layout(
-            title="Weather Forecast: Actual vs Predicted",
-            xaxis_title="Time",
+            title="Weather Forecast",
+            xaxis_title="Date",
             yaxis_title="Temperature",
-            template="plotly_dark",
         )
 
         st.plotly_chart(
@@ -129,15 +158,74 @@ if st.button("Predict"):
             use_container_width=True,
         )
 
-        mae = (
-            abs(
-                df["actual"] - df["predicted"]
-            )
-        ).mean()
-
-        st.write(
-            f"Mean Absolute Error (MAE): {mae:.2f} °C"
+        # Metrics
+        metrics_response = requests.get(
+            "http://backend:8000/metrics",
+            params={
+                "model_name": model_name
+            },
+            timeout=30,
         )
+
+        metrics = metrics_response.json()
+
+        st.subheader(
+            "Model Metrics"
+        )
+
+        st.write(metrics)
+
+    except Exception as e:
+
+        st.error(str(e))
+
+
+if st.button("Retrain model"):
+
+    payload = {
+        "city": city,
+        "model_name": model_name,
+    }
+
+    try:
+
+        response = requests.post(
+            "http://backend:8000/train",
+            json=payload,
+            timeout=300,
+        )
+
+        metrics = response.json()
+
+        st.success(
+            "Model retrained successfully"
+        )
+
+        st.write(metrics)
+
+    except Exception as e:
+
+        st.error(str(e))
+
+if st.button("Refresh weather data"):
+
+    try:
+
+        response = requests.post(
+            "http://backend:8000/refresh-data",
+            params={
+                "city": city,
+            },
+            timeout=300,
+        )
+
+        result = response.json()
+
+        st.success(
+            "Weather data refreshed"
+        )
+
+        st.write(result)
 
     except Exception as e:
 
